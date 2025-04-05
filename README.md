@@ -7,16 +7,15 @@ Este projeto configura um cluster ClickHouse de alta disponibilidade com 3 nós,
 - **3 Keepers**: `keeper1`, `keeper2`, `keeper3` para coordenação distribuída.
 - **HAProxy**: Balanceia HTTP (`8126`) e TCP (`9003`) com SSL.
 - **Clientes**: `ch-client` (CLI), `dbeaver` (GUI) e `tabix` (Web UI).
+- **Data Source**: `sqlserver_db`.
 
 ## Pré-requisitos
 - Docker e Docker Compose instalados.
-- Windows (ou outro SO compatível com Docker).
-- Opcional: Xming ou VcXsrv no Windows para DBeaver GUI.
+- Opcional: DBeaver GUI.
 
 ## Estrutura do Projeto
 ```
 .
-C:\Projects\Clickhouse-ReplicatedTable\
 ├── ch-node1-config\
 │   └── config.xml
 ├── ch-node2-config\
