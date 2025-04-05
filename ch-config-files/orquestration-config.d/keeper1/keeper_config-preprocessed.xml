@@ -1,0 +1,50 @@
+<!-- This file was generated automatically.
+     Do not edit it: it is likely to be discarded and generated again before it's read next time.
+     Files used to generate this file:
+       /etc/clickhouse-server/keeper_config.xml      -->
+
+<clickhouse>
+    <logger>
+        <level>trace</level>
+        <log>/var/log/clickhouse-server/clickhouse-server.log</log>
+        <errorlog>/var/log/clickhouse-server/clickhouse-server.err.log</errorlog>
+    </logger>
+
+    <profiles>
+        <default>
+            <log_queries>0</log_queries>
+        </default>
+    </profiles>
+
+    <keeper_server>
+        <tcp_port>9181</tcp_port>
+        <server_id>1</server_id>
+        <log_storage_path>/var/lib/clickhouse/coordination/log</log_storage_path>
+        <snapshot_storage_path>/var/lib/clickhouse/coordination/snapshots</snapshot_storage_path>
+
+        <listen_host>0.0.0.0</listen_host>
+        <coordination_settings>
+            <operation_timeout_ms>30000</operation_timeout_ms>
+            <session_timeout_ms>60000</session_timeout_ms>
+            <raft_logs_level>trace</raft_logs_level>
+        </coordination_settings>
+
+        <raft_configuration>
+            <server>
+                <id>1</id>
+                <hostname>keeper1</hostname> <!-- IP fixo do keeper1 -->
+                <port>9444</port>
+            </server>
+            <server>
+                <id>2</id>
+                <hostname>keeper2</hostname> <!-- IP fixo do keeper2 -->
+                <port>9444</port>
+            </server>
+            <server>
+                <id>3</id>
+                <hostname>keeper3</hostname> <!-- IP fixo do keeper3 -->
+                <port>9444</port>
+            </server>
+        </raft_configuration>
+    </keeper_server>
+</clickhouse>

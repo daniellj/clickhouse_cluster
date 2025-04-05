@@ -1,0 +1,3 @@
+CREATE SETTINGS PROFILE IF NOT EXISTS service
+ON CLUSTER data_hub_dw_001
+SETTINGS readonly = 0;

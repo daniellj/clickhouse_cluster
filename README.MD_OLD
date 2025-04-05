@@ -1,0 +1,119 @@
+1. Inicie o cluster:
+
+docker-compose up -d
+
+2. Conexão para DBeaver (HTTP):
+Host: localhost
+Porta: 8126
+Protocolo: HTTPS (marque "SSL" no DBeaver e aceite o certificado autoassinado para testes).
+Usuário: seu_usuario_aqui
+Senha: sua_senha_aqui
+
+3. Conexão para ETLs (TCP):
+Host: localhost
+Porta: 9003
+Use o cliente ClickHouse com TLS: clickhouse-client --host localhost --port 9003 --secure --user seu_usuario_aqui --password sua_senha_aqui
+
+4. Teste de tolerância a falhas:
+
+Pare um nó (docker stop ch-node1) e tente conectar em 8126 (HTTP) ou 9003 (TCP). O HAProxy redirecionará automaticamente.
+
+5. Monitoramento: Verifique o status dos nós em http://localhost:8404/stats
+
+6. Autenticação no ClickHouse com Credenciais Hash de Senha
+O ClickHouse suporta senhas hashadas (ex.: SHA256) para maior segurança. Aqui está como configurar:
+
+6.1 Gere o hash da senha: Use o clickhouse-client ou um comando no Docker para criar o hash:
+
+docker exec ch-client clickhouse-client --query "SELECT hex(SHA256('sua_senha_aqui'))"
+
+Capture a saída da senha em hash e coloque no arquivo users.xml.
+
+
+7. Configurar Let's Encrypt com HAProxy (Renovações Manuais)
+O Let's Encrypt fornece certificados SSL gratuitos válidos por 90 dias. Como você quer renovações manuais (sem automação), usaremos o certbot em um container Docker para gerar o certificado e configurá-lo no HAProxy.
+
+Passo a Passo
+7.1 Pré-requisitos:
+Você precisa de um domínio público (ex.: seu.dominio.com) apontando para o IP do seu servidor Windows onde o Docker está rodando.
+A porta 80 deve estar aberta temporariamente para validação HTTP-01 do Let's Encrypt.
+
+7.2 Gerar o Certificado com Certbot: No PowerShell, no diretório do projeto:
+
+docker run --rm -v "$PWD/letsencrypt:/etc/letsencrypt" -p "80:80" certbot/certbot certonly --standalone -d seu.dominio.com --email seu@email.com --agree-tos --no-eff-email
+
+Isso cria os arquivos fullchain.pem (certificado) e privkey.pem (chave privada) em letsencrypt/live/seu.dominio.com/.
+O modo --standalone usa a porta 80 para validação; certifique-se de que nenhum outro serviço a está usando durante o processo.
+
+7.3 Combinar os Arquivos para o HAProxy: O HAProxy exige um único arquivo .pem com o certificado e a chave:
+
+docker run --rm -v "$PWD/letsencrypt:/work" -w /work alpine sh -c "cat live/seu.dominio.com/fullchain.pem live/seu.dominio.com/privkey.pem > /work/haproxy.pem"
+
+7.4 Atualizar o docker-compose.yml: Certifique-se de que o haproxy.pem está montado corretamente:
+haproxy:
+  volumes:
+    - ./haproxy.pem:/usr/local/etc/haproxy/haproxy.pem:ro
+
+7.5 Reinicie o HAProxy:
+docker-compose restart haproxy
+
+7.6 Renovação Manual:
+O certificado expira em 90 dias. Para renovar manualmente:
+
+docker run --rm -v "$PWD/letsencrypt:/etc/letsencrypt" -p "80:80" certbot/certbot renew --cert-name seu.dominio.com
+
+Após renovar, recrie o haproxy.pem (passo 7.3) e reinicie o HAProxy.
+
+
+8. Passo a Passo para Gerar o Certificado com OpenSSL no Docker
+8.1. Gere o Certificado e a Chave Privada
+
+No PowerShell, no diretório do seu projeto, execute o seguinte comando para criar o certificado autoassinado com validade de 100 anos:
+
+docker run --rm -v "${PWD}:/work" -w /work alpine/openssl req -x509 -newkey rsa:2048 -keyout haproxy.key -out haproxy.crt -days 36500 -nodes -subj "/CN=localhost"
+
+Explicação:
+alpine/openssl: Imagem leve com OpenSSL.
+-v "$PWD:/work": Monta o diretório atual do Windows no container.
+req -x509: Gera um certificado autoassinado.
+-newkey rsa:2048: Cria uma chave privada RSA de 2048 bits.
+-keyout haproxy.key: Salva a chave privada.
+-out haproxy.crt: Salva o certificado.
+-days 36500: Define a validade para 100 anos (365 dias x 100).
+-nodes: Não criptografa a chave privada (sem senha, para simplificar o uso no HAProxy).
+-subj "/CN=localhost": Define o Common Name (CN) como localhost. Se você tiver um domínio (ex.: seu.dominio.com), substitua por /CN=seu.dominio.com.
+
+Isso criará dois arquivos no diretório do projeto:
+haproxy.key: A chave privada.
+haproxy.crt: O certificado público.
+
+8.2. Combine o Certificado e a Chave em um Arquivo .pem
+O HAProxy exige um único arquivo .pem contendo o certificado e a chave concatenados. Execute:
+
+docker run --rm -v "${PWD}:/work" -w /work alpine sh -c "cat haproxy.crt haproxy.key > haproxy.pem"
+
+Resultado: O arquivo haproxy.pem será criado no diretório atual, pronto para uso no HAProxy.
+
+8.3. Verifique o Certificado (Opcional)
+Para confirmar a validade de 100 anos, você pode inspecionar o certificado:
+
+docker run --rm -v "${PWD}:/work" -w /work alpine/openssl x509 -in haproxy.crt -text -noout
+
+Procure pela seção Validity na saída. Você verá algo como:
+Validity
+    Not Before: Mar 22 12:00:00 2025 GMT
+    Not After : Mar 20 12:00:00 2125 GMT
+
+Isso confirma que o certificado é válido até 2125 (100 anos a partir de agora, 22 de março de 2025).
+
+Reinicie o HAProxy para aplicar o novo certificado: 
+
+docker-compose restart haproxy
+
+8.4. Teste o Certificado
+
+Conexão HTTP (DBeaver):
+Configure no DBeaver: https://localhost:8126, aceite o certificado autoassinado (se necessário).
+
+Conexão TCP (ETLs):
+Use o clickhouse-client: docker exec -it ch-client clickhouse-client --host localhost --port 9003 --secure --user admin --password sua_senha_admin
