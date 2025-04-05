@@ -1,0 +1,40 @@
+ARG SQLSERVER_VERSION
+FROM mcr.microsoft.com/mssql/server:${SQLSERVER_VERSION}-latest
+
+ARG SQLSERVER_VERSION
+ARG MSSQL_SA_PASSWORD
+
+USER root
+
+# Instalar sqlcmd usando repositório oficial para Ubuntu 22.04
+RUN apt-get update && \
+    apt-get install -y curl apt-transport-https gnupg2 && \
+    curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc && \
+    curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev && \
+    echo 'export PATH="$PATH:/opt/mssql-tools18/bin:$PATH"' >> /etc/profile.d/mssql.sh && \
+    ln -sfn /opt/mssql-tools18/bin/sqlcmd /usr/bin/sqlcmd && \
+    ln -sfn /opt/mssql-tools18 /opt/mssql-tools && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+USER mssql
+
+ENV ACCEPT_EULA=Y
+ENV MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+
+WORKDIR /northwind
+COPY --chown=mssql:root ./init-db-sqlserver.sh ./
+COPY --chown=mssql:root ./data/db_northwind/instnwnd.sql ./
+COPY --chown=mssql:root ./data/db_northwind/load_control ./
+
+RUN chmod +x ./init-db-sqlserver.sh
+
+USER mssql
+
+ENV ACCEPT_EULA=Y
+ENV MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+
+WORKDIR /northwind
+
+ENTRYPOINT ["bash", "-c", "/opt/mssql/bin/sqlservr & ./init-db-sqlserver.sh; wait"]

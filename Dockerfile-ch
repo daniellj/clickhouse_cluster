@@ -1,0 +1,51 @@
+ARG UBUNTU_VERSION=__INVALID__
+FROM ubuntu:${UBUNTU_VERSION}
+
+ARG CLICKHOUSE_VERSION
+
+RUN test "$UBUNTU_VERSION" != "__INVALID__" || (echo "UBUNTU_VERSION não definido corretamente!" && exit 1)
+RUN test -n "$CLICKHOUSE_VERSION" || (echo "CLICKHOUSE_VERSION não definido!" && exit 1)
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar dependências
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    apt-transport-https \
+    ca-certificates \
+    dirmngr \
+    gnupg \
+    wget \
+    curl \
+    lsb-release \
+    tzdata \
+    sudo \
+    net-tools \
+    vim \
+    dateutils \
+    iputils-ping && \
+    rm -rf /var/lib/apt/lists/*
+
+# Criar usuário clickhouse com UID 101 (igual ao usado pelo pacote original)
+RUN useradd -u 101 -r -s /bin/false clickhouse
+
+# Adicionar chave GPG e repositório ClickHouse
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8919F6BD2B48D754 && \
+    echo "deb https://packages.clickhouse.com/deb stable main" > /etc/apt/sources.list.d/clickhouse.list
+
+RUN apt-get update && \
+    echo ">>> Última versão estável disponível do clickhouse-server:" && \
+    apt-cache madison clickhouse-server | head -n 1 | awk '{print $3}'
+
+RUN apt-get update && \
+    apt-get install -y \
+    clickhouse-server=${CLICKHOUSE_VERSION} \
+    clickhouse-client=${CLICKHOUSE_VERSION} \
+    clickhouse-common-static=${CLICKHOUSE_VERSION} && \
+rm -rf /var/lib/apt/lists/*
+
+# Criar diretórios de configuração e dados
+RUN mkdir -p /var/lib/clickhouse /etc/clickhouse-server/config.d /etc/clickhouse-server/users.d /var/log/clickhouse-server /var/lib/clickhouse/access /var/lib/clickhouse/access/users /var/lib/clickhouse/access/roles /var/lib/clickhouse/access/settings_profiles /var/lib/clickhouse/access/quotas
+RUN chown -R clickhouse:clickhouse /var/lib/clickhouse/access
+
+# Instala ferramenta de backup

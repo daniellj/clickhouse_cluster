@@ -1,0 +1,103 @@
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+    <default_replica_path>/clickhouse/tables/{shard}/db_uuid/{uuid}</default_replica_path>
+    <default_replica_name>{replica}</default_replica_name>
+
+    <macros>
+        <cluster>data_hub_dw_001</cluster>
+        <shard>1</shard>
+        <replica>ch-node2</replica>
+    </macros>
+
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <interserver_http_port>9009</interserver_http_port>
+
+    <logger>
+        <level>trace</level>
+        <log>/var/log/clickhouse-server/clickhouse-server.log</log>
+        <errorlog>/var/log/clickhouse-server/clickhouse-server.err.log</errorlog>
+        <size>500M</size>
+    </logger>
+
+    <display_name>cluster {cluster} - replica {replica}</display_name>
+    <path>/var/lib/clickhouse/</path>
+    <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+    <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+    <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
+
+    <zookeeper>
+        <node>
+            <host>keeper1</host> <!-- IP fixo do keeper1 -->
+            <port>9181</port>
+        </node>
+        <node>
+            <host>keeper2</host> <!-- IP fixo do keeper2 -->
+            <port>9181</port>
+        </node>
+        <node>
+            <host>keeper3</host> <!-- IP fixo do keeper3 -->
+            <port>9181</port>
+        </node>
+    </zookeeper>
+
+    <remote_servers>
+        <data_hub_dw_001>
+            <shard>
+                <internal_replication>true</internal_replication>
+                <replica>
+                    <host>ch-node1</host>
+                    <port>9000</port>
+                </replica>
+                <replica>
+                    <host>ch-node2</host>
+                    <port>9000</port>
+                </replica>
+                <replica>
+                    <host>ch-node3</host>
+                    <port>9000</port>
+                </replica>
+            </shard>
+        </data_hub_dw_001>
+    </remote_servers>
+
+    <distributed_ddl>
+        <path>/clickhouse/task_queue/ddl</path>
+        <use_same_user_on_cluster>true</use_same_user_on_cluster>
+    </distributed_ddl>
+
+    <access_control>
+        <enabled>true</enabled>
+        <path>/var/lib/clickhouse/access/</path>
+    </access_control>
+
+    <user_directories>
+        <users_xml>
+            <path>config.xml</path>
+        </users_xml>
+        <local_directory>
+            <path>/var/lib/clickhouse/access/</path>
+        </local_directory>
+    </user_directories>
+
+    <users>
+        <default>
+            <password_sha256_hex>E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855</password_sha256_hex>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <access_management>1</access_management>
+            <named_collection_control>1</named_collection_control>
+            <show_named_collections>1</show_named_collections>
+            <show_named_collections_secrets>1</show_named_collections_secrets>
+        </default>
+    </users>
+
+    <profiles>
+        <default>
+            <readonly>0</readonly>
+        </default>
+    </profiles>
+
+</clickhouse>
