@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS dw_raw.countries ON CLUSTER '{cluster}'
 )
 ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{shard}/dw_raw_countries', '{replica}', create_date_ts)
 PARTITION BY substring(lang_en_formatted, 1, 1)
-ORDER BY (alpha_2, alpha_3, create_date_ts)
+ORDER BY (alpha_2, alpha_3)
 PRIMARY KEY (alpha_2, alpha_3)
 SETTINGS index_granularity = 8192;
 
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS dw_staging.countries ON CLUSTER '{cluster}'
 )
 ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{shard}/dw_staging_countries', '{replica}', create_date_ts)
 PARTITION BY substring(lang_en_formatted, 1, 1)
-ORDER BY (alpha_2, alpha_3, create_date_ts)
+ORDER BY (alpha_2, alpha_3)
 PRIMARY KEY (alpha_2, alpha_3)
 SETTINGS index_granularity = 8192;
 
