@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS dw_raw.countries ON CLUSTER '{cluster}'
     alpha_3 String COMMENT 'ISO 3166-1 alpha-3 country code (3-letter format).',
     create_date_ts DateTime COMMENT 'Timestamp of record creation or ingestion.'
 )
-ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/dw_raw_countries', '{replica}')
+ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{shard}/dw_raw_countries', '{replica}', create_date_ts)
 PARTITION BY substring(lang_en_formatted, 1, 1)
 ORDER BY (alpha_2, alpha_3, create_date_ts)
 PRIMARY KEY (alpha_2, alpha_3)
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS dw_staging.countries ON CLUSTER '{cluster}'
     continent String COMMENT 'Continent to which the country belongs, derived from ISO alpha-2 country code.',
     create_date_ts DateTime COMMENT 'Timestamp of record creation or ingestion.'
 )
-ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/dw_staging_countries', '{replica}')
+ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{shard}/dw_staging_countries', '{replica}', create_date_ts)
 PARTITION BY substring(lang_en_formatted, 1, 1)
 ORDER BY (alpha_2, alpha_3, create_date_ts)
 PRIMARY KEY (alpha_2, alpha_3)
