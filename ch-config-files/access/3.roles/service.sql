@@ -1,4 +1,3 @@
--- DW_REP
 CREATE ROLE IF NOT EXISTS service_rw
 ON CLUSTER data_hub_dw_001;
 
